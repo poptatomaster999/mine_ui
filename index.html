@@ -44,7 +44,7 @@
   </style>
 </head>
 <body>
-  <h1>마인크래프트 UI 오버레이 툴 (터치 + 크기 + 회전 지원)</h1>
+  <h1>마인크래프트 UI 오버레이 툴 (배경 회전 지원)</h1>
   <input type="file" id="upload" accept="image/*">
   <div style="position: relative; display: inline-block;">
     <canvas id="canvas"></canvas>
@@ -52,7 +52,7 @@
   </div>  <div class="controls">
     <label for="scale">UI 크기: </label>
     <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1">
-    <button onclick="rotateImage()">회전</button>
+    <button onclick="rotateBackground()">배경 회전</button>
     <button onclick="downloadImage()">저장</button>
   </div>  <script>
     const canvas = document.getElementById("canvas");
@@ -64,15 +64,14 @@
     let baseImage = new Image();
     let dragging = false;
     let offsetX, offsetY;
-    let currentRotation = 0;
+    let bgRotation = 0;
 
     upload.addEventListener("change", (e) => {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (event) => {
         baseImage.onload = () => {
-          canvas.width = baseImage.width * 0.5;
-          canvas.height = baseImage.height * 0.5;
+          updateCanvasSize();
           draw();
         };
         baseImage.src = event.target.result;
@@ -80,19 +79,36 @@
       reader.readAsDataURL(file);
     });
 
+    function updateCanvasSize() {
+      if (bgRotation % 180 === 0) {
+        canvas.width = baseImage.width * 0.5;
+        canvas.height = baseImage.height * 0.5;
+      } else {
+        canvas.width = baseImage.height * 0.5;
+        canvas.height = baseImage.width * 0.5;
+      }
+    }
+
     function draw() {
+      updateCanvasSize();
+      ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((bgRotation * Math.PI) / 180);
+      const drawWidth = baseImage.width * 0.5;
+      const drawHeight = baseImage.height * 0.5;
+      ctx.drawImage(baseImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      ctx.restore();
+    }
+
+    function rotateBackground() {
+      bgRotation = (bgRotation + 90) % 360;
+      draw();
     }
 
     scaleSlider.addEventListener("input", () => {
       uiImage.style.width = `${200 * parseFloat(scaleSlider.value)}px`;
     });
-
-    function rotateImage() {
-      currentRotation = (currentRotation + 90) % 360;
-      uiImage.style.transform = `rotate(${currentRotation}deg)`;
-    }
 
     uiImage.addEventListener("mousedown", (e) => {
       dragging = true;
@@ -130,29 +146,32 @@
 
     function downloadImage() {
       const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = baseImage.width;
-      tempCanvas.height = baseImage.height;
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
       const tempCtx = tempCanvas.getContext("2d");
-      tempCtx.drawImage(baseImage, 0, 0);
 
-      const scale = parseFloat(scaleSlider.value);
-      const canvasRect = canvas.getBoundingClientRect();
+      tempCtx.save();
+      tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+      tempCtx.rotate((bgRotation * Math.PI) / 180);
+      const drawWidth = baseImage.width * 0.5;
+      const drawHeight = baseImage.height * 0.5;
+      tempCtx.drawImage(baseImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      tempCtx.restore();
+
       const uiRect = uiImage.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const scale = parseFloat(scaleSlider.value);
+
       const x = uiRect.left - canvasRect.left;
       const y = uiRect.top - canvasRect.top;
 
-      const realX = x * (baseImage.width / canvas.width);
-      const realY = y * (baseImage.height / canvas.height);
-      const realWidth = uiImage.offsetWidth * (baseImage.width / canvas.width);
+      const realX = x * (tempCanvas.width / canvas.width);
+      const realY = y * (tempCanvas.height / canvas.height);
+      const realWidth = uiImage.offsetWidth * (tempCanvas.width / canvas.width);
 
       const tempImg = new Image();
       tempImg.onload = () => {
-        tempCtx.save();
-        tempCtx.translate(realX + realWidth / 2, realY + tempImg.height / 2);
-        tempCtx.rotate(currentRotation * Math.PI / 180);
-        tempCtx.drawImage(tempImg, -realWidth / 2, -tempImg.height / 2, realWidth, tempImg.height * (realWidth / tempImg.width));
-        tempCtx.restore();
-
+        tempCtx.drawImage(tempImg, realX, realY, realWidth, tempImg.height * (realWidth / tempImg.width));
         const link = document.createElement("a");
         link.download = "overlay_result.png";
         link.href = tempCanvas.toDataURL();
