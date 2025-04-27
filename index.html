@@ -1,0 +1,121 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>마크 UI 드래그 오버레이</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: #1e1e1e;
+      color: white;
+    }
+    canvas {
+      margin-top: 10px;
+      border: 1px solid #555;
+      touch-action: none;
+      max-width: 100%;
+    }
+    #uiImage {
+      display: none;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>마인크래프트 UI 오버레이 툴 (터치 드래그 지원)</h1>
+  <input type="file" id="upload" accept="image/*" /><br />
+  <canvas id="canvas"></canvas><br />
+  <img id="uiImage" src="inventory_bar.png" />
+  <div class="controls">
+    <button onclick="downloadImage()">저장</button>
+  </div>  <script>
+    const upload = document.getElementById('upload');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const uiImage = document.getElementById('uiImage');
+
+    let uploadedImg = new Image();
+    let baseImgLoaded = false;
+
+    let uiX = 50;
+    let uiY = 50;
+    let dragging = false;
+
+    upload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        uploadedImg.onload = () => {
+          canvas.width = uploadedImg.width;
+          canvas.height = uploadedImg.height;
+          baseImgLoaded = true;
+          drawCanvas();
+        };
+        uploadedImg.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    canvas.addEventListener('mousedown', startDrag);
+    canvas.addEventListener('mousemove', onDrag);
+    canvas.addEventListener('mouseup', endDrag);
+    canvas.addEventListener('touchstart', startDrag);
+    canvas.addEventListener('touchmove', onDrag);
+    canvas.addEventListener('touchend', endDrag);
+
+    function getEventPos(e) {
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - canvas.getBoundingClientRect().left,
+          y: e.touches[0].clientY - canvas.getBoundingClientRect().top
+        };
+      } else {
+        return {
+          x: e.offsetX,
+          y: e.offsetY
+        };
+      }
+    }
+
+    function startDrag(e) {
+      const pos = getEventPos(e);
+      if (pos.x >= uiX && pos.x <= uiX + uiImage.width && pos.y >= uiY && pos.y <= uiY + uiImage.height) {
+        dragging = true;
+        e.preventDefault();
+      }
+    }
+
+    function onDrag(e) {
+      if (!dragging) return;
+      const pos = getEventPos(e);
+      uiX = pos.x;
+      uiY = pos.y;
+      drawCanvas();
+      e.preventDefault();
+    }
+
+    function endDrag() {
+      dragging = false;
+    }
+
+    function drawCanvas() {
+      if (!baseImgLoaded) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(uploadedImg, 0, 0);
+      ctx.drawImage(uiImage, uiX, uiY);
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.download = 'minecraft_ui_overlay.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  </script></body>
+</html>
