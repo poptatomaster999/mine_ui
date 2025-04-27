@@ -1,124 +1,133 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html><html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>마크 UI 드래그 오버레이</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마인크래프트 UI 오버레이 툴</title>
   <style>
     body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      background: #1e1e1e;
+      background-color: #1e1e1e;
       color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
     }
     canvas {
       margin-top: 10px;
-      border: 1px solid #555;
-      touch-action: none;
-      max-width: 100%;
-    }
-    #uiImage {
-      display: none;
+      border: 1px solid #444;
+      max-width: 90vw;
+      max-height: 50vh;
     }
     .controls {
-      margin-top: 10px;
+      margin-top: 15px;
     }
-    input[type=range] {
-      width: 300px;
+    .ui-overlay {
+      position: absolute;
+      cursor: move;
+      touch-action: none;
     }
   </style>
 </head>
 <body>
-  <h1>마인크래프트 UI 오버레이 툴 (터치 드래그 지원)</h1>
-  <input type="file" id="upload" accept="image/*" /><br />
-  <canvas id="canvas"></canvas><br />
-  <img id="uiImage" src="inventory_bar.png" />
-  <div class="controls">
+  <h1>마인크래프트 UI 오버레이 툴 (터치 + 크기조절 지원)</h1>
+  <input type="file" id="upload" accept="image/*">
+  <div style="position: relative; display: inline-block;">
+    <canvas id="canvas"></canvas>
+    <img id="uiImage" src="inventory_bar.png" class="ui-overlay" style="top: 50px; left: 50px; width: 200px;" draggable="false">
+  </div>  <div class="controls">
+    <label for="scale">UI 크기: </label>
+    <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1">
     <button onclick="downloadImage()">저장</button>
   </div>  <script>
-    const upload = document.getElementById('upload');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const uiImage = document.getElementById('uiImage');
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const upload = document.getElementById("upload");
+    const uiImage = document.getElementById("uiImage");
+    const scaleSlider = document.getElementById("scale");
 
-    let uploadedImg = new Image();
-    let baseImgLoaded = false;
-
-    let uiX = 50;
-    let uiY = 50;
+    let baseImage = new Image();
     let dragging = false;
+    let offsetX, offsetY;
 
-    upload.addEventListener('change', (e) => {
+    upload.addEventListener("change", (e) => {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (event) => {
-        uploadedImg.onload = () => {
-          canvas.width = uploadedImg.width * 0.5;
-          canvas.height = uploadedImg.height * 0.5;
-          baseImgLoaded = true;
-          drawCanvas();
+        baseImage.onload = () => {
+          canvas.width = baseImage.width * 0.5;
+          canvas.height = baseImage.height * 0.5;
+          draw();
         };
-        uploadedImg.src = event.target.result;
+        baseImage.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    canvas.addEventListener('mousedown', startDrag);
-    canvas.addEventListener('mousemove', onDrag);
-    canvas.addEventListener('mouseup', endDrag);
-    canvas.addEventListener('touchstart', startDrag);
-    canvas.addEventListener('touchmove', onDrag);
-    canvas.addEventListener('touchend', endDrag);
-
-    function getEventPos(e) {
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - canvas.getBoundingClientRect().left,
-          y: e.touches[0].clientY - canvas.getBoundingClientRect().top
-        };
-      } else {
-        return {
-          x: e.offsetX,
-          y: e.offsetY
-        };
-      }
-    }
-
-    function startDrag(e) {
-      const pos = getEventPos(e);
-      if (pos.x >= uiX && pos.x <= uiX + uiImage.width && pos.y >= uiY && pos.y <= uiY + uiImage.height) {
-        dragging = true;
-        e.preventDefault();
-      }
-    }
-
-    function onDrag(e) {
-      if (!dragging) return;
-      const pos = getEventPos(e);
-      uiX = pos.x;
-      uiY = pos.y;
-      drawCanvas();
-      e.preventDefault();
-    }
-
-    function endDrag() {
-      dragging = false;
-    }
-
-    function drawCanvas() {
-      if (!baseImgLoaded) return;
+    function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(uploadedImg, 0, 0, canvas.width, canvas.height);
-      ctx.drawImage(uiImage, uiX, uiY);
+      ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
     }
+
+    scaleSlider.addEventListener("input", () => {
+      uiImage.style.width = `${200 * parseFloat(scaleSlider.value)}px`;
+    });
+
+    uiImage.addEventListener("mousedown", (e) => {
+      dragging = true;
+      offsetX = e.offsetX;
+      offsetY = e.offsetY;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      uiImage.style.left = `${e.pageX - offsetX}px`;
+      uiImage.style.top = `${e.pageY - offsetY}px`;
+    });
+
+    document.addEventListener("mouseup", () => dragging = false);
+
+    uiImage.addEventListener("touchstart", (e) => {
+      dragging = true;
+      const touch = e.touches[0];
+      const rect = uiImage.getBoundingClientRect();
+      offsetX = touch.clientX - rect.left;
+      offsetY = touch.clientY - rect.top;
+    });
+
+    document.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const touch = e.touches[0];
+      uiImage.style.left = `${touch.pageX - offsetX}px`;
+      uiImage.style.top = `${touch.pageY - offsetY}px`;
+    });
+
+    document.addEventListener("touchend", () => dragging = false);
 
     function downloadImage() {
-      const link = document.createElement('a');
-      link.download = 'minecraft_ui_overlay.png';
-      link.href = canvas.toDataURL();
-      link.click();
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = baseImage.width;
+      tempCanvas.height = baseImage.height;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.drawImage(baseImage, 0, 0);
+
+      const scale = parseFloat(scaleSlider.value);
+      const canvasRect = canvas.getBoundingClientRect();
+      const uiRect = uiImage.getBoundingClientRect();
+      const x = uiRect.left - canvasRect.left;
+      const y = uiRect.top - canvasRect.top;
+
+      const realX = x * (baseImage.width / canvas.width);
+      const realY = y * (baseImage.height / canvas.height);
+      const realWidth = uiImage.offsetWidth * (baseImage.width / canvas.width);
+
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        tempCtx.drawImage(tempImg, realX, realY, realWidth, tempImg.height * (realWidth / tempImg.width));
+        const link = document.createElement("a");
+        link.download = "overlay_result.png";
+        link.href = tempCanvas.toDataURL();
+        link.click();
+      };
+      tempImg.src = uiImage.src;
     }
   </script></body>
 </html>
