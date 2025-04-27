@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!DOCTYPE html><html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,10 +20,24 @@
     .controls {
       margin-top: 15px;
     }
+    .controls button {
+      font-size: 18px;
+      padding: 10px 20px;
+      min-width: 120px;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      background-color: #45a049;
+    }
     .ui-overlay {
       position: absolute;
       cursor: move;
       touch-action: none;
+      z-index: 10;
     }
   </style>
 </head>
@@ -34,15 +47,11 @@
   <div style="position: relative; display: inline-block;">
     <canvas id="canvas"></canvas>
     <img id="uiImage" src="inventory_bar.png" class="ui-overlay" style="top: 50px; left: 50px; width: 200px;" draggable="false">
-  </div>
-
-  <div class="controls">
+  </div>  <div class="controls">
     <label for="scale">UI 크기: </label>
     <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1">
     <button onclick="downloadImage()">저장</button>
-  </div>
-
-  <script>
+  </div>  <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const upload = document.getElementById("upload");
@@ -80,6 +89,7 @@
       dragging = true;
       offsetX = e.offsetX;
       offsetY = e.offsetY;
+      e.stopPropagation();
     });
 
     document.addEventListener("mousemove", (e) => {
@@ -91,11 +101,13 @@
     document.addEventListener("mouseup", () => dragging = false);
 
     uiImage.addEventListener("touchstart", (e) => {
+      if (e.target !== uiImage) return;
       dragging = true;
       const touch = e.touches[0];
       const rect = uiImage.getBoundingClientRect();
       offsetX = touch.clientX - rect.left;
       offsetY = touch.clientY - rect.top;
+      e.stopPropagation();
     });
 
     document.addEventListener("touchmove", (e) => {
@@ -103,7 +115,7 @@
       const touch = e.touches[0];
       uiImage.style.left = `${touch.pageX - offsetX}px`;
       uiImage.style.top = `${touch.pageY - offsetY}px`;
-    });
+    }, { passive: false });
 
     document.addEventListener("touchend", () => dragging = false);
 
@@ -134,6 +146,5 @@
       };
       tempImg.src = uiImage.src;
     }
-  </script>
-</body>
+  </script></body>
 </html>
