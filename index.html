@@ -29,6 +29,7 @@
       color: white;
       border-radius: 5px;
       cursor: pointer;
+      margin: 5px;
     }
     .controls button:hover {
       background-color: #45a049;
@@ -38,18 +39,20 @@
       cursor: move;
       touch-action: none;
       z-index: 10;
+      transform-origin: center center;
     }
   </style>
 </head>
 <body>
-  <h1>마인크래프트 UI 오버레이 툴 (터치 + 크기조절 지원)</h1>
+  <h1>마인크래프트 UI 오버레이 툴 (터치 + 크기 + 회전 지원)</h1>
   <input type="file" id="upload" accept="image/*">
   <div style="position: relative; display: inline-block;">
     <canvas id="canvas"></canvas>
-    <img id="uiImage" src="inventory_bar.png" class="ui-overlay" style="top: 50px; left: 50px; width: 200px;" draggable="false">
+    <img id="uiImage" src="inventory_bar_v2.png" class="ui-overlay" style="top: 50px; left: 50px; width: 200px;" draggable="false">
   </div>  <div class="controls">
     <label for="scale">UI 크기: </label>
     <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1">
+    <button onclick="rotateImage()">회전</button>
     <button onclick="downloadImage()">저장</button>
   </div>  <script>
     const canvas = document.getElementById("canvas");
@@ -61,6 +64,7 @@
     let baseImage = new Image();
     let dragging = false;
     let offsetX, offsetY;
+    let currentRotation = 0;
 
     upload.addEventListener("change", (e) => {
       const file = e.target.files[0];
@@ -84,6 +88,11 @@
     scaleSlider.addEventListener("input", () => {
       uiImage.style.width = `${200 * parseFloat(scaleSlider.value)}px`;
     });
+
+    function rotateImage() {
+      currentRotation = (currentRotation + 90) % 360;
+      uiImage.style.transform = `rotate(${currentRotation}deg)`;
+    }
 
     uiImage.addEventListener("mousedown", (e) => {
       dragging = true;
@@ -138,7 +147,12 @@
 
       const tempImg = new Image();
       tempImg.onload = () => {
-        tempCtx.drawImage(tempImg, realX, realY, realWidth, tempImg.height * (realWidth / tempImg.width));
+        tempCtx.save();
+        tempCtx.translate(realX + realWidth / 2, realY + tempImg.height / 2);
+        tempCtx.rotate(currentRotation * Math.PI / 180);
+        tempCtx.drawImage(tempImg, -realWidth / 2, -tempImg.height / 2, realWidth, tempImg.height * (realWidth / tempImg.width));
+        tempCtx.restore();
+
         const link = document.createElement("a");
         link.download = "overlay_result.png";
         link.href = tempCanvas.toDataURL();
