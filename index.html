@@ -2,7 +2,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>마인크래프트 UI 오버레이 툴</title>
+  <title>마인크래프트 UI 오버레이 툴 (캡처 저장)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body {
       background-color: #1e1e1e;
@@ -11,11 +12,22 @@
       text-align: center;
       padding: 20px;
     }
+    .capture-zone {
+      position: relative;
+      display: inline-block;
+    }
     canvas {
       margin-top: 10px;
       border: 1px solid #444;
       max-width: 90vw;
       max-height: 50vh;
+    }
+    .ui-overlay {
+      position: absolute;
+      cursor: move;
+      touch-action: none;
+      z-index: 10;
+      transform-origin: center center;
     }
     .controls {
       margin-top: 15px;
@@ -34,26 +46,18 @@
     .controls button:hover {
       background-color: #45a049;
     }
-    .ui-overlay {
-      position: absolute;
-      cursor: move;
-      touch-action: none;
-      z-index: 10;
-      transform-origin: center center;
-    }
   </style>
 </head>
 <body>
-  <h1>마인크래프트 UI 오버레이 툴 (배경 회전 지원)</h1>
-  <input type="file" id="upload" accept="image/*">
-  <div style="position: relative; display: inline-block;">
+  <h1>마인크래프트 UI 오버레이 툴 (배경 회전 + 캡처 저장)</h1>
+  <input type="file" id="upload" accept="image/*">  <div class="capture-zone" id="captureTarget">
     <canvas id="canvas"></canvas>
     <img id="uiImage" src="inventory_bar_v2.png" class="ui-overlay" style="top: 50px; left: 50px; width: 200px;" draggable="false">
   </div>  <div class="controls">
     <label for="scale">UI 크기: </label>
     <input type="range" id="scale" min="0.5" max="2" step="0.1" value="1">
     <button onclick="rotateBackground()">배경 회전</button>
-    <button onclick="downloadImage()">저장</button>
+    <button onclick="captureImage()">저장</button>
   </div>  <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -144,40 +148,15 @@
 
     document.addEventListener("touchend", () => dragging = false);
 
-    function downloadImage() {
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext("2d");
-
-      tempCtx.save();
-      tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
-      tempCtx.rotate((bgRotation * Math.PI) / 180);
-      const drawWidth = baseImage.width * 0.5;
-      const drawHeight = baseImage.height * 0.5;
-      tempCtx.drawImage(baseImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      tempCtx.restore();
-
-      const uiRect = uiImage.getBoundingClientRect();
-      const canvasRect = canvas.getBoundingClientRect();
-      const scale = parseFloat(scaleSlider.value);
-
-      const x = uiRect.left - canvasRect.left;
-      const y = uiRect.top - canvasRect.top;
-
-      const realX = x * (tempCanvas.width / canvas.width);
-      const realY = y * (tempCanvas.height / canvas.height);
-      const realWidth = uiImage.offsetWidth * (tempCanvas.width / canvas.width);
-
-      const tempImg = new Image();
-      tempImg.onload = () => {
-        tempCtx.drawImage(tempImg, realX, realY, realWidth, tempImg.height * (realWidth / tempImg.width));
+    function captureImage() {
+      html2canvas(document.querySelector("#captureTarget"), {
+        useCORS: true
+      }).then(canvas => {
         const link = document.createElement("a");
-        link.download = "overlay_result.png";
-        link.href = tempCanvas.toDataURL();
+        link.download = "overlay_capture.png";
+        link.href = canvas.toDataURL();
         link.click();
-      };
-      tempImg.src = uiImage.src;
+      });
     }
   </script></body>
 </html>
