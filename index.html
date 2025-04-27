@@ -25,6 +25,9 @@
     .controls {
       margin-top: 10px;
     }
+    input[type=range] {
+      width: 300px;
+    }
   </style>
 </head>
 <body>
@@ -52,8 +55,8 @@
       const reader = new FileReader();
       reader.onload = (event) => {
         uploadedImg.onload = () => {
-          canvas.width = uploadedImg.width;
-          canvas.height = uploadedImg.height;
+          canvas.width = uploadedImg.width * 0.5;
+          canvas.height = uploadedImg.height * 0.5;
           baseImgLoaded = true;
           drawCanvas();
         };
@@ -107,7 +110,7 @@
     function drawCanvas() {
       if (!baseImgLoaded) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(uploadedImg, 0, 0);
+      ctx.drawImage(uploadedImg, 0, 0, canvas.width, canvas.height);
       ctx.drawImage(uiImage, uiX, uiY);
     }
 
